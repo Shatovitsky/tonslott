@@ -1,62 +1,38 @@
-const TelegramBot = require('node-telegram-bot-api');
-const express = require('express');
-const cors = require('cors');
+const express = require("express");
+const path = require("path");
+const TelegramBot = require("node-telegram-bot-api");
 const config = require('./config');
-
-const bot = new TelegramBot(config.token, { polling: true });
-const app = express();
-
-app.use(express.json());
-app.use(cors());
-bot.on('callback_query', async (query) => {
-    const chatId = query.message.chat.id;
-    const data = query.data;
-  
-    if (data === 'button1') {
-        await bot.sendPhoto(chatId, config.file_id, {
-            caption:"Прогнозы исхода игры Aviator ✈️ до 50x 🔥",
-            reply_markup: {
-                inline_keyboard: [
-                    [{text: 'Получить прогноз', web_app: {url: config.webAppUrl}}]
-                ]
-            }
-        });
-          
-  
-      
-    } else if (data === 'button2') {
-        await bot.sendPhoto(chatId, config.file_id2, {
-            caption:"Прогнозы исхода игры LuckyJet ✈️ до 50x 🔥",
-            reply_markup: {
-                inline_keyboard: [
-                    [{text: 'Получить прогноз', web_app: {url: config.webAppUrl2}}]
-                ]
-            }
+const server = express();
+const bot = new TelegramBot(config.token, {
+    polling: true
+});
+const port = process.env.PORT || 5000;
+const queries = {};
+const gameName = "Aviator"
+const gameName2 = "LuckyJet"
+bot.onText(/start|game/, (msg) => bot.sendGame(msg.from.id, gameName));
+bot.onText(/start|game/, (msg) => bot.sendGame(msg.from.id, gameName2));
+bot.on("callback_query", function (query) {
+    if (query.game_short_name !== gameName) {
+        bot.answerCallbackQuery(query.id, "Sorry, '" + query.game_short_name + "' is not available.");
+    } else {
+        queries[query.id] = query;
+        bot.answerCallbackQuery({
+            callback_query_id: query.id,
+            url: config.webAppUrl
         });
     }
-  });
-  
-  bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-    const text = msg.text;
-  
-    if (text === "/start") {
-      const text = 'Привет, выбери необходимый режим игры';
-      const options = {
-        reply_markup: JSON.stringify({
-          inline_keyboard: [
-            [
-              { text: 'Aviator', callback_data: 'button1' },
-              { text: 'LuckyJet', callback_data: 'button2' },
-            ],
-          ],
-        }),
-      };
-  
-      await bot.sendMessage(chatId, text, options);
+});
+bot.on("callback_query", function (query) {
+    if (query.game_short_name !== gameName2) {
+        bot.answerCallbackQuery(query.id, "Sorry, '" + query.game_short_name + "' is not available.");
+    } else {
+        queries[query.id] = query;
+        bot.answerCallbackQuery({
+            callback_query_id: query.id,
+            url: config.webAppUrl2
+        });
     }
-  });
+});
 
 
-
-const PORT = 8000
